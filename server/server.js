@@ -86,11 +86,7 @@ app.use((err, req, res, next) => {
     message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
   });
 });
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📊 API Health: http://localhost:${PORT}/api/health`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
