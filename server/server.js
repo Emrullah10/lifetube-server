@@ -18,9 +18,25 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration
+
+// CORS configuration - Support multiple origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://lifetube-web.onrender.com',
+  process.env.CLIENT_URL // Additional custom URL from environment
+].filter(Boolean); // Remove undefined values
 const corsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -57,7 +73,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     message: 'LifeTube API is running',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    allowedOrigins: allowedOrigins // Show allowed origins for debugging
   });
 });
 
@@ -69,7 +86,11 @@ app.use((err, req, res, next) => {
     message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
   });
 });
-
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`📊 API Health: http://localhost:${PORT}/api/health`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
