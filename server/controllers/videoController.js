@@ -6,10 +6,8 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Set FFmpeg path for both development and production
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-if (process.env.NODE_ENV !== 'production') {
-  ffmpeg.setFfmpegPath('C:\\ffmpeg\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe');
-}
 const generateThumbnail = (videoPath, outputPath) => {
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
@@ -27,6 +25,7 @@ const getVideoDuration = (videoPath) => {
   return new Promise((resolve) => {
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
+        console.error('FFprobe error:', err);
         resolve(0);
       } else {
         resolve(Math.floor(metadata.format.duration || 0));
@@ -47,6 +46,7 @@ export const uploadVideo = async (req, res) => {
     const thumbnailFilename = `thumb-${Date.now()}.png`;
     // Get video duration
     const duration = await getVideoDuration(videoFile.path);
+    console.log('Video duration:', duration);
     // Upload video to Supabase Storage
     const videoBuffer = fs.readFileSync(videoFile.path);
     const { data: videoData, error: videoError } = await supabase.storage
@@ -93,7 +93,9 @@ export const uploadVideo = async (req, res) => {
         if (!fs.existsSync(tempDir)) {
           fs.mkdirSync(tempDir, { recursive: true });
         }
+        console.log('Generating thumbnail from video...');
         await generateThumbnail(videoFile.path, tempThumbPath);
+        console.log('Thumbnail generated successfully');
         const thumbBuffer = fs.readFileSync(tempThumbPath);
         const { data: thumbData, error: thumbError } = await supabase.storage
           .from('thumbnails')
@@ -106,6 +108,7 @@ export const uploadVideo = async (req, res) => {
             .from('thumbnails')
             .getPublicUrl(thumbnailFilename);
           thumbnailUrl = thumbUrlData.publicUrl;
+          console.log('Thumbnail uploaded to Supabase:', thumbnailUrl);
         }
         // Clean up temp thumbnail
         fs.unlinkSync(tempThumbPath);
@@ -144,6 +147,7 @@ export const uploadVideo = async (req, res) => {
     });
   }
 };
+// ... (rest of the functions remain the same)
 export const getAllVideos = async (req, res) => {
   try {
     const { category, search, limit = 20, offset = 0 } = req.query;
